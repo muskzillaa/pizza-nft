@@ -110,9 +110,12 @@
       });
     }
     wallet.onChange((state) => {
-      if (state.connected && dashStatus) {
-        dashStatus.textContent = wallet.shortAddress();
-        dashConnect.style.display = 'none';
+      if (state.connected) {
+        if (dashStatus) dashStatus.textContent = wallet.shortAddress();
+        if (dashConnect) dashConnect.style.display = 'none';
+      } else {
+        if (dashStatus) dashStatus.textContent = 'Not connected';
+        if (dashConnect) dashConnect.style.display = '';
       }
     });
   </script>

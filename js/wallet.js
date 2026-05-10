@@ -21,6 +21,9 @@ class WalletManager {
     this.walletId = null;
     this.listeners = [];
     this._eventsBound = false;
+    this._boundProvider = null;
+    this._accountsHandler = null;
+    this._chainHandler = null;
   }
 
   onChange(callback) {
@@ -127,17 +130,35 @@ class WalletManager {
     }
   }
 
+  _unbindProviderEvents() {
+    if (this._boundProvider && this._accountsHandler) {
+      this._boundProvider.removeListener?.('accountsChanged', this._accountsHandler);
+      this._boundProvider.removeListener?.('chainChanged', this._chainHandler);
+    }
+    this._boundProvider = null;
+    this._accountsHandler = null;
+    this._chainHandler = null;
+    this._eventsBound = false;
+  }
+
   _bindProviderEvents(provider) {
+    // If already bound to a different provider, unbind old one first
+    if (this._eventsBound && this._boundProvider !== provider) {
+      this._unbindProviderEvents();
+    }
     if (this._eventsBound) return;
-    provider.on?.('accountsChanged', (accounts) => {
+    this._accountsHandler = (accounts) => {
       this.address = accounts && accounts[0] ? accounts[0] : null;
       if (!this.address) clearWalletId();
       this._emit();
-    });
-    provider.on?.('chainChanged', (chainIdHex) => {
+    };
+    this._chainHandler = (chainIdHex) => {
       this.chainId = parseInt(chainIdHex, 16);
       this._emit();
-    });
+    };
+    provider.on?.('accountsChanged', this._accountsHandler);
+    provider.on?.('chainChanged', this._chainHandler);
+    this._boundProvider = provider;
     this._eventsBound = true;
   }
 
@@ -170,6 +191,7 @@ class WalletManager {
   }
 
   disconnect() {
+    this._unbindProviderEvents();
     this.provider = null;
     this.signer = null;
     this.address = null;

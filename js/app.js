@@ -29,7 +29,8 @@ function isInstalled(id) {
 function initCountdown() {
   const el = $('#countdown');
   if (!el) return;
-  const deadline = new Date().getTime() + (6*24*60*60*1000) + (20*60*60*1000) + (20*60*1000) + (11*1000);
+  // Fixed deadline: July 1, 2026 00:00:00 UTC — does NOT reset on page reload.
+  const deadline = new Date('2026-07-01T00:00:00Z').getTime();
   function tick() {
     const diff = deadline - Date.now();
     if (diff <= 0) { el.innerHTML = '<span>ENDED</span>'; return; }

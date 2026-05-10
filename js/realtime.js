@@ -33,7 +33,10 @@ class CitreaRPC {
 
   async getBalance(address) {
     const hex = await this.call('eth_getBalance', [address, 'latest']);
-    return Number(BigInt(hex)) / 1e18;
+    const wei = BigInt(hex);
+    const whole = wei / 10n ** 18n;
+    const frac = wei % 10n ** 18n;
+    return Number(whole) + Number(frac) / 1e18;
   }
 }
 
@@ -132,7 +135,8 @@ class RealtimeStats {
           for (const tx of block.transactions) {
             if (!tx.to || tx.to.toLowerCase() !== wantedTo) continue;
             if (!tx.value || tx.value === '0x0') continue;
-            const value = Number(BigInt(tx.value)) / 1e18;
+            const txWei = BigInt(tx.value);
+            const value = Number(txWei / 10n ** 12n) / 1e6; // safe precision for typical amounts
             // Only count tx whose value is a near-integer multiple of price (mint payments)
             const slices = value / price;
             const isMint = slices >= 0.99 && Math.abs(slices - Math.round(slices)) < 0.02;
