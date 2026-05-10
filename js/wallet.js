@@ -1,12 +1,26 @@
 import CONFIG from './config.js';
 
+const STORAGE_KEY = 'pizza-nft.wallet.id';
+
+function saveWalletId(id) {
+  try { localStorage.setItem(STORAGE_KEY, id); } catch (_) { /* private mode */ }
+}
+function clearWalletId() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) { /* private mode */ }
+}
+function loadWalletId() {
+  try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; }
+}
+
 class WalletManager {
   constructor() {
     this.provider = null;
     this.signer = null;
     this.address = null;
     this.chainId = null;
+    this.walletId = null;
     this.listeners = [];
+    this._eventsBound = false;
   }
 
   onChange(callback) {
@@ -66,25 +80,65 @@ class WalletManager {
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       this.address = accounts[0];
       this.provider = provider;
+      this.walletId = walletId;
       const chainIdHex = await provider.request({ method: 'eth_chainId' });
       this.chainId = parseInt(chainIdHex, 16);
       if (this.chainId !== CONFIG.network.chainIdDecimal) {
         await this.switchToCitrea();
       }
-      provider.on?.('accountsChanged', (accounts) => {
-        this.address = accounts[0] || null;
-        this._emit();
-      });
-      provider.on?.('chainChanged', (chainIdHex) => {
-        this.chainId = parseInt(chainIdHex, 16);
-        this._emit();
-      });
+      this._bindProviderEvents(provider);
+      saveWalletId(walletId);
       this._emit();
       return this.address;
     } catch (err) {
       console.error('Wallet connection failed:', err);
       throw err;
     }
+  }
+
+  // Silent re-connect using a previously saved walletId. No prompt;
+  // returns null if there is no saved wallet, no provider, or the
+  // wallet has been disconnected at the extension level.
+  async autoReconnect() {
+    const walletId = loadWalletId();
+    if (!walletId) return null;
+    const provider = this._getProvider(walletId);
+    if (!provider) return null;
+    try {
+      // eth_accounts is silent — does NOT prompt the user.
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      if (!accounts || !accounts.length) {
+        clearWalletId();
+        return null;
+      }
+      this.address = accounts[0];
+      this.provider = provider;
+      this.walletId = walletId;
+      try {
+        const chainIdHex = await provider.request({ method: 'eth_chainId' });
+        this.chainId = parseInt(chainIdHex, 16);
+      } catch (_) { this.chainId = null; }
+      this._bindProviderEvents(provider);
+      this._emit();
+      return this.address;
+    } catch (err) {
+      console.warn('autoReconnect failed:', err);
+      return null;
+    }
+  }
+
+  _bindProviderEvents(provider) {
+    if (this._eventsBound) return;
+    provider.on?.('accountsChanged', (accounts) => {
+      this.address = accounts && accounts[0] ? accounts[0] : null;
+      if (!this.address) clearWalletId();
+      this._emit();
+    });
+    provider.on?.('chainChanged', (chainIdHex) => {
+      this.chainId = parseInt(chainIdHex, 16);
+      this._emit();
+    });
+    this._eventsBound = true;
   }
 
   async switchToCitrea() {
@@ -120,6 +174,8 @@ class WalletManager {
     this.signer = null;
     this.address = null;
     this.chainId = null;
+    this.walletId = null;
+    clearWalletId();
     this._emit();
   }
 

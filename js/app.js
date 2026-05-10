@@ -402,4 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMint();
   initNetworkSwitch();
   initRealtime();
+  // Silent re-connect for users who previously connected on another page.
+  // Runs after listeners are wired so UI reflects the restored state.
+  wallet.autoReconnect().catch(() => { /* swallowed */ });
 });
