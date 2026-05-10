@@ -29,8 +29,21 @@ function isInstalled(id) {
 function initCountdown() {
   const el = $('#countdown');
   if (!el) return;
-  // Fixed deadline: July 1, 2026 00:00:00 UTC — does NOT reset on page reload.
-  const deadline = new Date('2026-07-01T00:00:00Z').getTime();
+  // Campaign duration: 7 days. The deadline is persisted in localStorage so it
+  // does NOT reset on page reload or navigation. First visitor sets the clock.
+  const CAMPAIGN_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+  const STORAGE_KEY = 'pizza-nft.countdown.deadline';
+  let deadline;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      deadline = parseInt(stored, 10);
+    }
+  } catch (_) { /* private mode */ }
+  if (!deadline || isNaN(deadline)) {
+    deadline = Date.now() + CAMPAIGN_DURATION_MS;
+    try { localStorage.setItem(STORAGE_KEY, String(deadline)); } catch (_) {}
+  }
   function tick() {
     const diff = deadline - Date.now();
     if (diff <= 0) { el.innerHTML = '<span>ENDED</span>'; return; }
