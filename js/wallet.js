@@ -115,8 +115,16 @@ class WalletManager {
   async autoReconnect() {
     const walletId = loadWalletId();
     if (!walletId) return null;
-    const provider = this._getProvider(walletId);
+
+    // Wallet extensions (MetaMask, Rabby, OKX, etc.) inject window.ethereum
+    // asynchronously. On page navigation the provider might not be available
+    // immediately when module scripts execute. We wait up to 2 seconds.
+    let provider = this._getProvider(walletId);
+    if (!provider) {
+      provider = await this._waitForProvider(walletId, 2000);
+    }
     if (!provider) return null;
+
     try {
       // eth_accounts is silent — does NOT prompt the user.
       const accounts = await provider.request({ method: 'eth_accounts' });
@@ -138,6 +146,27 @@ class WalletManager {
       console.warn('autoReconnect failed:', err);
       return null;
     }
+  }
+
+  // Wait for the wallet provider to become available (extensions inject async)
+  _waitForProvider(walletId, timeoutMs = 2000) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      const check = () => {
+        const provider = this._getProvider(walletId);
+        if (provider) return resolve(provider);
+        if (Date.now() - start >= timeoutMs) return resolve(null);
+        setTimeout(check, 100);
+      };
+      // Also listen for EIP-6963 or the legacy 'ethereum#initialized' event
+      if (typeof window !== 'undefined' && !window.ethereum) {
+        window.addEventListener('ethereum#initialized', () => {
+          const p = this._getProvider(walletId);
+          if (p) resolve(p);
+        }, { once: true });
+      }
+      check();
+    });
   }
 
   _unbindProviderEvents() {

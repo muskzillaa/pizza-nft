@@ -404,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initNetworkSwitch();
   initRealtime();
   // Silent re-connect for users who previously connected on another page.
-  // Runs after listeners are wired so UI reflects the restored state.
+  // Awaited so UI reflects restored state before the page appears idle.
+  // Uses _waitForProvider internally to handle async extension injection.
   wallet.autoReconnect().catch(() => { /* swallowed */ });
 });
