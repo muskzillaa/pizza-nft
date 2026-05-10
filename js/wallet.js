@@ -138,6 +138,40 @@ class WalletManager {
     const balEth = Number(balWei) / 1e18;
     return balEth.toFixed(6);
   }
+
+  async sendTransaction({ to, value }) {
+    if (!this.provider || !this.address) {
+      throw new Error('Wallet not connected');
+    }
+    if (this.chainId !== CONFIG.network.chainIdDecimal) {
+      await this.switchToCitrea();
+    }
+    const txHash = await this.provider.request({
+      method: 'eth_sendTransaction',
+      params: [{
+        from: this.address,
+        to,
+        value: typeof value === 'bigint' ? '0x' + value.toString(16) : value
+      }]
+    });
+    return txHash;
+  }
+
+  async waitForTx(txHash, { intervalMs = 3000, timeoutMs = 180000 } = {}) {
+    if (!this.provider) throw new Error('Wallet not connected');
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const receipt = await this.provider.request({
+          method: 'eth_getTransactionReceipt',
+          params: [txHash]
+        });
+        if (receipt) return receipt;
+      } catch (_) { /* RPC blip, retry */ }
+      await new Promise(r => setTimeout(r, intervalMs));
+    }
+    throw new Error('Timed out waiting for transaction confirmation');
+  }
 }
 
 const wallet = new WalletManager();

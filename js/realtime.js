@@ -56,7 +56,7 @@ class RealtimeStats {
   constructor() {
     this.state = {
       ready: false,
-      hasContract: false,
+      hasTreasury: false,
       raised: 0,
       patrons: 0,
       goal: CONFIG.collection.goalAmount,
@@ -91,15 +91,15 @@ class RealtimeStats {
   }
 
   async refresh() {
-    const contract = (CONFIG.contract.address || '').toLowerCase();
-    const hasContract = contract && contract !== ZERO.toLowerCase();
+    const treasury = (CONFIG.treasury?.address || '').toLowerCase();
+    const hasTreasury = treasury && treasury !== ZERO.toLowerCase();
     try {
       const latest = await rpc.blockNumber();
       this.state.latestBlock = latest;
       this.state.networkOk = true;
-      this.state.hasContract = hasContract;
+      this.state.hasTreasury = hasTreasury;
 
-      if (!hasContract) {
+      if (!hasTreasury) {
         this.state.raised = 0;
         this.state.patrons = 0;
         this.state.progressPct = 0;
@@ -110,54 +110,59 @@ class RealtimeStats {
         return;
       }
 
-      const raised = await rpc.getBalance(CONFIG.contract.address);
-      this.state.raised = raised;
-      this.state.progressPct = Math.min(100, (raised / CONFIG.collection.goalAmount) * 100);
-
+      const price = parseFloat(CONFIG.collection.pricePerSlice);
       const blocks = Math.min(CONFIG.realtime.activityBlocksToScan, latest);
       const txs = [];
       const patrons = new Set();
-      const wantedTo = CONFIG.contract.address.toLowerCase();
+      let raised = 0;
+      const wantedTo = treasury;
 
       const blockNums = [];
       for (let i = 0; i < blocks; i++) blockNums.push(latest - i);
 
-      // Fetch blocks in batches of 10 to avoid hammering RPC.
       const batchSize = 10;
       for (let i = 0; i < blockNums.length; i += batchSize) {
         const batch = blockNums.slice(i, i + batchSize);
-        const blocks = await Promise.all(
+        const fetched = await Promise.all(
           batch.map(n => rpc.getBlock('0x' + n.toString(16), true).catch(() => null))
         );
-        for (const block of blocks) {
+        for (const block of fetched) {
           if (!block || !block.transactions) continue;
           const ts = parseInt(block.timestamp, 16);
           for (const tx of block.transactions) {
-            if (tx.to && tx.to.toLowerCase() === wantedTo && tx.value && tx.value !== '0x0') {
-              const value = Number(BigInt(tx.value)) / 1e18;
-              patrons.add(tx.from.toLowerCase());
-              txs.push({
-                hash: tx.hash,
-                from: tx.from,
-                value,
-                timestamp: ts
-              });
-            }
+            if (!tx.to || tx.to.toLowerCase() !== wantedTo) continue;
+            if (!tx.value || tx.value === '0x0') continue;
+            const value = Number(BigInt(tx.value)) / 1e18;
+            // Only count tx whose value is a near-integer multiple of price (mint payments)
+            const slices = value / price;
+            const isMint = slices >= 0.99 && Math.abs(slices - Math.round(slices)) < 0.02;
+            if (!isMint) continue;
+            patrons.add(tx.from.toLowerCase());
+            raised += value;
+            txs.push({
+              hash: tx.hash,
+              from: tx.from,
+              value,
+              slices: Math.round(slices),
+              timestamp: ts
+            });
           }
         }
-        if (txs.length >= CONFIG.realtime.activityMaxRows * 4) break;
       }
 
       txs.sort((a, b) => b.timestamp - a.timestamp);
+      this.state.raised = raised;
+      this.state.patrons = patrons.size;
+      this.state.progressPct = Math.min(100, (raised / CONFIG.collection.goalAmount) * 100);
       this.state.activity = txs.slice(0, CONFIG.realtime.activityMaxRows).map(t => ({
         from: t.from,
         fromShort: shortAddr(t.from),
         amount: t.value,
-        amountStr: `+${t.value.toFixed(4)} cBTC`,
+        slices: t.slices,
+        amountStr: `+${t.value.toFixed(8)} cBTC`,
         timeAgo: formatTimeAgo(t.timestamp),
         hash: t.hash
       }));
-      this.state.patrons = patrons.size;
       this.state.ready = true;
       this.state.error = null;
     } catch (err) {

@@ -2,6 +2,7 @@ import CONFIG from './config.js';
 import wallet from './wallet.js';
 import { getWalletLogo } from './wallet-logos.js';
 import stats from './realtime.js';
+import { getPizzaForReveal, rarityFromHash } from './pizza-svg.js';
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -162,9 +163,18 @@ async function updateDashboard() {
   }
 }
 
+// Convert a decimal cBTC string (e.g. "0.00006186") to wei BigInt without
+// floating-point error.
+function parseCbtcToWei(amountStr) {
+  const [intPart, fracPart = ''] = String(amountStr).split('.');
+  const fracPadded = (fracPart + '000000000000000000').slice(0, 18);
+  return BigInt(intPart || '0') * 10n ** 18n + BigInt(fracPadded || '0');
+}
+
 function initMint() {
   const mintBtn = $('#mintBtn');
   if (!mintBtn) return;
+  const treasury = CONFIG.treasury?.address;
   mintBtn.addEventListener('click', async () => {
     if (!wallet.address) {
       $('#connectWallet')?.click();
@@ -174,14 +184,106 @@ function initMint() {
       await wallet.switchToCitrea();
       return;
     }
-    mintBtn.textContent = 'minting...';
+    if (!treasury || /^0x0+$/i.test(treasury)) {
+      alert('Treasury address is not configured.');
+      return;
+    }
+    const slicesEl = $('#sliceCount');
+    const slices = Math.max(1, Math.min(20, parseInt(slicesEl?.value || '1', 10) || 1));
+    const pricePerSlice = CONFIG.collection.pricePerSlice;
+    const totalWei = parseCbtcToWei(pricePerSlice) * BigInt(slices);
+    const original = mintBtn.textContent;
+    mintBtn.textContent = 'Confirm in wallet…';
     mintBtn.disabled = true;
-    setTimeout(() => {
-      mintBtn.textContent = 'Mint';
+    try {
+      const txHash = await wallet.sendTransaction({
+        to: treasury,
+        value: '0x' + totalWei.toString(16)
+      });
+      mintBtn.textContent = 'Confirming on-chain…';
+      showMintReveal({ txHash, slices, totalWei, status: 'pending' });
+      try {
+        const receipt = await wallet.waitForTx(txHash);
+        const success = receipt.status === '0x1' || receipt.status === 1;
+        showMintReveal({ txHash, slices, totalWei, status: success ? 'success' : 'failed', receipt });
+      } catch (waitErr) {
+        console.warn('waitForTx failed:', waitErr);
+        showMintReveal({ txHash, slices, totalWei, status: 'pending' });
+      }
+    } catch (err) {
+      console.error('Mint failed:', err);
+      const code = err?.code;
+      if (code === 4001 || /reject/i.test(err?.message || '')) {
+        // user rejected — silent
+      } else {
+        alert('Mint failed: ' + (err?.message || err));
+      }
+    } finally {
+      mintBtn.textContent = original || 'Mint';
       mintBtn.disabled = false;
-      alert('This is a demo. Connect a real contract to enable minting.');
-    }, 2000);
+    }
   });
+}
+
+function formatCbtcFromWei(weiBig) {
+  const w = BigInt(weiBig);
+  const whole = w / 10n ** 18n;
+  const frac = w % 10n ** 18n;
+  const fracStr = frac.toString().padStart(18, '0').replace(/0+$/, '') || '0';
+  return `${whole}.${fracStr}`;
+}
+
+function showMintReveal({ txHash, slices, totalWei, status, receipt }) {
+  const overlay = $('#mintRevealOverlay');
+  const modal = $('#mintRevealModal');
+  if (!overlay || !modal) {
+    if (status === 'success') alert(`Mint confirmed!\nTx: ${txHash}`);
+    return;
+  }
+  const rarity = rarityFromHash(txHash);
+  const explorer = CONFIG.network.blockExplorerUrls[0];
+  const totalCbtc = formatCbtcFromWei(totalWei);
+  const statusBadge = {
+    pending: `<span class="status-pill pending">Confirming on-chain…</span>`,
+    success: `<span class="status-pill success">Confirmed</span>`,
+    failed: `<span class="status-pill failed">Reverted</span>`
+  }[status] || '';
+  modal.innerHTML = `
+    <button class="modal-close" id="revealClose">×</button>
+    <div class="reveal-inner">
+      <div class="reveal-art rarity-${rarity.tier}">${getPizzaForReveal(txHash, 240)}</div>
+      <div class="reveal-body">
+        <div class="reveal-rarity">
+          <span class="rarity-tag tier-${rarity.tier}">${rarity.name}</span>
+          ${statusBadge}
+        </div>
+        <h3>Your slice is reserved</h3>
+        <p class="reveal-sub">${slices} slice${slices > 1 ? 's' : ''} for ${totalCbtc} cBTC, sent to the founder treasury.</p>
+        <p class="reveal-note">The on-chain NFT itself will be airdropped to your wallet after the campaign closes &mdash; this transaction is your permanent receipt and reveals the rarity that will be minted to you.</p>
+        <div class="reveal-row">
+          <span class="reveal-label">Tx</span>
+          <a class="reveal-link" href="${explorer}/tx/${txHash}" target="_blank" rel="noopener">${txHash.slice(0, 10)}…${txHash.slice(-8)}</a>
+        </div>
+        <div class="reveal-row">
+          <span class="reveal-label">Treasury</span>
+          <a class="reveal-link" href="${explorer}/address/${CONFIG.treasury.address}" target="_blank" rel="noopener">${CONFIG.treasury.address.slice(0, 10)}…${CONFIG.treasury.address.slice(-6)}</a>
+        </div>
+        <button class="btn primary" id="revealOk">Got it</button>
+      </div>
+    </div>
+  `;
+  overlay.classList.add('show');
+  modal.classList.add('show');
+  modal.querySelector('#revealClose')?.addEventListener('click', closeMintReveal);
+  modal.querySelector('#revealOk')?.addEventListener('click', closeMintReveal);
+  overlay.addEventListener('click', closeMintReveal, { once: true });
+  // Refresh stats after a short delay so the row appears in activity
+  setTimeout(() => stats.refresh(), 4000);
+}
+
+function closeMintReveal() {
+  $('#mintRevealOverlay')?.classList.remove('show');
+  $('#mintRevealModal')?.classList.remove('show');
 }
 
 function renderRealtime(state) {
@@ -193,12 +295,7 @@ function renderRealtime(state) {
 
   const conversionNote = $('#conversionNote');
   if (conversionNote) conversionNote.textContent = `1 slice = ${price} cBTC`;
-
-  const ethInput = $('#ethInput');
-  if (ethInput && (ethInput.value === '' || ethInput.dataset.fromConfig === '1')) {
-    ethInput.value = price;
-    ethInput.dataset.fromConfig = '1';
-  }
+  syncSliceTotal();
 
   const dashGoal = $('#dashGoal');
   if (dashGoal) dashGoal.textContent = String(goal);
@@ -228,8 +325,8 @@ function renderRealtime(state) {
     if (!state.networkOk) {
       status.textContent = 'rpc offline';
       status.style.color = 'var(--red)';
-    } else if (!state.hasContract) {
-      status.textContent = `live · block #${state.latestBlock} · awaiting contract`;
+    } else if (!state.hasTreasury) {
+      status.textContent = `live · block #${state.latestBlock} · treasury not set`;
       status.style.color = 'var(--text-soft)';
     } else {
       status.textContent = `live · block #${state.latestBlock}`;
@@ -241,10 +338,10 @@ function renderRealtime(state) {
   if (tbody) {
     if (!state.ready) {
       tbody.innerHTML = '<tr><td colspan="3" style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-soft)">Loading from Citrea…</td></tr>';
-    } else if (!state.hasContract) {
-      tbody.innerHTML = '<tr><td colspan="3" style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-soft)">No on-chain activity yet — contract not deployed</td></tr>';
+    } else if (!state.hasTreasury) {
+      tbody.innerHTML = '<tr><td colspan="3" style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-soft)">Treasury address not configured</td></tr>';
     } else if (state.activity.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-soft)">No contributions yet — be the first patron</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-soft)">No mints yet — be the first patron</td></tr>';
     } else {
       tbody.innerHTML = state.activity.map(t =>
         `<tr>
@@ -268,10 +365,40 @@ function initNetworkSwitch() {
   switchBtn.addEventListener('click', () => wallet.switchToCitrea());
 }
 
+function syncSliceTotal() {
+  const sliceEl = $('#sliceCount');
+  const ethInput = $('#ethInput');
+  const sLabel = $('#sliceLabelS');
+  if (!sliceEl) return;
+  let n = parseInt(sliceEl.value, 10);
+  if (!Number.isFinite(n) || n < 1) n = 1;
+  if (n > 20) n = 20;
+  if (String(n) !== sliceEl.value) sliceEl.value = String(n);
+  const totalWei = parseCbtcToWei(CONFIG.collection.pricePerSlice) * BigInt(n);
+  if (ethInput) ethInput.value = formatCbtcFromWei(totalWei) + ' cBTC';
+  if (sLabel) sLabel.textContent = n === 1 ? '' : 's';
+}
+
+function initSlicePicker() {
+  const sliceEl = $('#sliceCount');
+  if (!sliceEl) return;
+  $('#sliceMinus')?.addEventListener('click', () => {
+    sliceEl.value = String(Math.max(1, (parseInt(sliceEl.value, 10) || 1) - 1));
+    syncSliceTotal();
+  });
+  $('#slicePlus')?.addEventListener('click', () => {
+    sliceEl.value = String(Math.min(20, (parseInt(sliceEl.value, 10) || 1) + 1));
+    syncSliceTotal();
+  });
+  sliceEl.addEventListener('input', syncSliceTotal);
+  syncSliceTotal();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initNav();
   initCountdown();
   initWalletUI();
+  initSlicePicker();
   initMint();
   initNetworkSwitch();
   initRealtime();

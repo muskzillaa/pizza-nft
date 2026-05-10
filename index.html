@@ -87,13 +87,19 @@
         </div>
         <div class="divider fade-in"></div>
         <div class="fade-in">
-          <input type="text" class="mint-input" id="ethInput" value="">
+          <div class="slice-row">
+            <button class="slice-step" id="sliceMinus" type="button">−</button>
+            <input type="number" min="1" max="20" step="1" class="slice-input" id="sliceCount" value="1">
+            <button class="slice-step" id="slicePlus" type="button">+</button>
+            <span class="slice-x">slice<span id="sliceLabelS">s</span></span>
+          </div>
+          <input type="text" class="mint-input" id="ethInput" value="" readonly>
           <div class="conversion-note" id="conversionNote">1 slice = — cBTC</div>
         </div>
         <button class="btn-mint fade-in" id="mintBtn">Mint</button>
         <div class="mint-footer fade-in">
-          <p>full refund if it fails</p>
-          <p>you keep the art</p>
+          <p>cBTC sent directly to founder treasury</p>
+          <p>NFT airdropped after campaign closes</p>
         </div>
       </section>
     </div>
@@ -106,6 +112,8 @@
     </div>
     <div class="wallet-list" id="walletList"></div>
   </div>
+  <div class="modal-overlay" id="mintRevealOverlay"></div>
+  <div class="reveal-modal" id="mintRevealModal"></div>
   <footer class="site-footer">
     <p>PIZZA NFT &middot; Built on <a href="https://citrea.xyz" target="_blank">Citrea</a></p>
   </footer>

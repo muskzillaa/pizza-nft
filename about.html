@@ -40,18 +40,18 @@
         and ownership of something meaningful on-chain.
       </p>
       <p class="fade-in">
-        Each pizza slice is a unique, generative pixel art NFT with randomized toppings, crusts, and flavor traits.
-        The collection is funded through a transparent crowdfunding mechanism: if we hit the goal, everyone gets their slice.
-        If not, <strong>everyone gets a full refund</strong>.
+        Each pizza slice is a unique, generative pixel art NFT with randomized toppings and rarity tiers
+        (Common, Uncommon, Rare, Epic, Legendary). Your tier is revealed the moment your mint transaction
+        confirms on Citrea — it is permanently encoded in your transaction hash.
       </p>
       <h2 class="fade-in">How It Works</h2>
       <ul class="feature-list fade-in">
         <li>Connect any EVM wallet (MetaMask, Rabby, Coinbase, Trust, OKX, etc.)</li>
         <li>The site automatically switches your wallet to the Citrea mainnet</li>
         <li>Choose how many slices you want and click Mint</li>
-        <li>Your cBTC is held in the crowdfund smart contract</li>
-        <li>If the goal is reached, NFTs are distributed to all patrons</li>
-        <li>If the goal is NOT reached, you receive a full refund in cBTC</li>
+        <li>Your cBTC is sent <strong>directly to the founder treasury</strong> in a single on-chain transaction — no intermediary contract</li>
+        <li>The transaction hash determines your rarity tier and is your permanent receipt</li>
+        <li>After the campaign closes, NFTs are airdropped from the treasury to every patron's wallet</li>
       </ul>
       <h2 class="fade-in">Why Citrea?</h2>
       <p class="fade-in">
@@ -66,7 +66,8 @@
         <li><strong>Currency:</strong> cBTC (Citrea Bitcoin)</li>
         <li><strong>Standard:</strong> ERC-721</li>
         <li><strong>Art:</strong> Fully on-chain, generative pixel art</li>
-        <li><strong>Refund policy:</strong> 100% refund if goal not met</li>
+        <li><strong>Treasury:</strong> Founder-managed wallet on Citrea (see below)</li>
+        <li><strong>Refund policy:</strong> If the goal is not met by the deadline, the founder commits to refunding all patrons proportionally from the treasury wallet</li>
       </ul>
       <h2 class="fade-in">The Team</h2>
       <div class="team-grid fade-in">
@@ -86,14 +87,14 @@
           <div class="role">Community</div>
         </div>
       </div>
-      <h2 class="fade-in" style="margin-top:2.5rem">Contract</h2>
+      <h2 class="fade-in" style="margin-top:2.5rem">Treasury Wallet</h2>
       <div class="card fade-in" style="margin-top:0.75rem">
-        <div class="label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-soft);margin-bottom:0.5rem">Contract Address (Citrea Mainnet)</div>
+        <div class="label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-soft);margin-bottom:0.5rem">Founder Treasury Address (Citrea Mainnet)</div>
         <div style="font-size:0.75rem;word-break:break-all;color:var(--text-muted)">
-          0x0000000000000000000000000000000000000000
+          0x00001e1f764feefda7f8059618f7c6023f8c180e
         </div>
         <div style="font-size:0.65rem;color:var(--text-soft);margin-top:0.5rem">
-          <a href="https://explorer.mainnet.citrea.xyz" target="_blank" style="text-decoration:underline;text-underline-offset:2px">View on Citrea Explorer</a>
+          <a href="https://explorer.mainnet.citrea.xyz/address/0x00001e1f764feefda7f8059618f7c6023f8c180e" target="_blank" style="text-decoration:underline;text-underline-offset:2px">View on Citrea Explorer</a>
         </div>
       </div>
     </div>
