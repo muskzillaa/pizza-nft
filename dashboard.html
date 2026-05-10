@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — PIZZA NFT</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><span class="pizza-emoji">&#127829;</span> PIZZA</a>
+      <button class="menu-toggle" id="menuToggle"><span></span><span></span><span></span></button>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Mint</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="collection.html" class="nav-link">Collection</a></li>
+        <li><a href="about.html" class="nav-link">About</a></li>
+        <li>
+          <button class="btn-connect" id="connectWallet">Connect Wallet</button>
+          <div class="wallet-info" id="walletInfo">
+            <span class="wallet-addr" id="walletAddr"></span>
+            <button class="btn-disconnect" id="disconnectBtn">X</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <div class="network-warning" id="networkWarning">
+    <span>Wrong network — please switch to Citrea</span>
+    <button id="switchNetwork">Switch</button>
+  </div>
+  <main class="page">
+    <div class="section-subtitle fade-in">Dashboard</div>
+    <h2 class="section-title fade-in">Fundraise Overview</h2>
+    <div class="dash-grid">
+      <div class="dash-card fade-in">
+        <div class="label">Total Raised</div>
+        <div class="value" id="dashRaised">—</div>
+        <div class="sub">cBTC</div>
+      </div>
+      <div class="dash-card fade-in">
+        <div class="label">Goal</div>
+        <div class="value" id="dashGoal">—</div>
+        <div class="sub">cBTC</div>
+      </div>
+      <div class="dash-card fade-in">
+        <div class="label">Patrons</div>
+        <div class="value" id="dashPatrons">—</div>
+        <div class="sub">unique wallets</div>
+      </div>
+      <div class="dash-card fade-in">
+        <div class="label">Price / Slice</div>
+        <div class="value" id="dashPrice">—</div>
+        <div class="sub">cBTC</div>
+      </div>
+    </div>
+    <div class="card fade-in" style="margin-bottom:2rem">
+      <div class="label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-soft);margin-bottom:0.75rem">Funding Progress</div>
+      <div class="progress-bar" style="height:4px;margin-bottom:0.5rem"><div class="progress-fill" id="dashProgressFill" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-muted)">
+        <span id="dashProgressPct">—% funded</span>
+        <span id="dashProgressRemaining">— cBTC remaining</span>
+      </div>
+    </div>
+    <div class="card fade-in" style="margin-bottom:2rem">
+      <div class="label" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text-soft);margin-bottom:0.75rem">Your Wallet</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:0.8rem;color:var(--text-muted)" id="dashWalletStatus">Not connected</div>
+          <div style="font-size:1.1rem;font-family:'DM Serif Display',serif;margin-top:0.25rem" id="userBalance">—</div>
+        </div>
+        <button class="btn-connect" id="dashConnect" style="font-size:0.65rem;padding:0.45rem 0.85rem">Connect</button>
+      </div>
+    </div>
+    <div class="section-subtitle fade-in" style="display:flex;align-items:center;gap:0.5rem;justify-content:space-between">
+      <span>Recent Activity</span>
+      <span id="realtimeStatus" style="font-size:0.55rem;color:var(--text-soft);text-transform:none;letter-spacing:0.04em">connecting…</span>
+    </div>
+    <div class="card fade-in">
+      <table class="activity-table">
+        <thead>
+          <tr><th>Wallet</th><th>Amount</th><th>Time</th></tr>
+        </thead>
+        <tbody id="activityBody">
+          <tr><td colspan="3" style="padding:1.5rem 0.5rem;text-align:center;color:var(--text-soft)">Loading from Citrea…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="wallet-modal" id="walletModal">
+    <div class="modal-header">
+      <h3>Connect Wallet</h3>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="wallet-list" id="walletList"></div>
+  </div>
+  <footer class="site-footer">
+    <p>PIZZA NFT &middot; Built on <a href="https://citrea.xyz" target="_blank">Citrea</a></p>
+  </footer>
+  <script type="module">
+    import './js/app.js';
+    import wallet from './js/wallet.js';
+    const dashConnect = document.getElementById('dashConnect');
+    const dashStatus = document.getElementById('dashWalletStatus');
+    if (dashConnect) {
+      dashConnect.addEventListener('click', () => {
+        document.getElementById('connectWallet')?.click();
+      });
+    }
+    wallet.onChange((state) => {
+      if (state.connected && dashStatus) {
+        dashStatus.textContent = wallet.shortAddress();
+        dashConnect.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

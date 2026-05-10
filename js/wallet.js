@@ -1,0 +1,144 @@
+import CONFIG from './config.js';
+
+class WalletManager {
+  constructor() {
+    this.provider = null;
+    this.signer = null;
+    this.address = null;
+    this.chainId = null;
+    this.listeners = [];
+  }
+
+  onChange(callback) {
+    this.listeners.push(callback);
+  }
+
+  _emit() {
+    const state = {
+      connected: !!this.address,
+      address: this.address,
+      chainId: this.chainId,
+      correctNetwork: this.chainId === CONFIG.network.chainIdDecimal
+    };
+    this.listeners.forEach(cb => cb(state));
+  }
+
+  getAvailableWallets() {
+    const wallets = [];
+    const eth = window.ethereum;
+    if (typeof eth !== 'undefined') {
+      const providers = Array.isArray(eth.providers) && eth.providers.length ? eth.providers : [eth];
+      const seen = new Set();
+      for (const p of providers) {
+        if (p?.isMetaMask && !seen.has('metamask')) { wallets.push({ id: 'metamask', name: 'MetaMask', icon: 'metamask' }); seen.add('metamask'); }
+        if (p?.isRabby && !seen.has('rabby')) { wallets.push({ id: 'rabby', name: 'Rabby', icon: 'rabby' }); seen.add('rabby'); }
+        if (p?.isCoinbaseWallet && !seen.has('coinbase')) { wallets.push({ id: 'coinbase', name: 'Coinbase Wallet', icon: 'coinbase' }); seen.add('coinbase'); }
+        if (p?.isTrust && !seen.has('trust')) { wallets.push({ id: 'trust', name: 'Trust Wallet', icon: 'trust' }); seen.add('trust'); }
+      }
+    }
+    if (window.okxwallet && !wallets.find(w => w.id === 'okx')) {
+      wallets.push({ id: 'okx', name: 'OKX Wallet', icon: 'okx' });
+    }
+    return wallets;
+  }
+
+  _getProvider(walletId) {
+    if (walletId === 'okx' && window.okxwallet) return window.okxwallet;
+    const eth = window.ethereum;
+    if (!eth) return null;
+    const providers = Array.isArray(eth.providers) && eth.providers.length ? eth.providers : [eth];
+    const match = providers.find(p => {
+      if (walletId === 'metamask') return p?.isMetaMask;
+      if (walletId === 'rabby') return p?.isRabby;
+      if (walletId === 'coinbase') return p?.isCoinbaseWallet;
+      if (walletId === 'trust') return p?.isTrust;
+      return false;
+    });
+    return match || eth;
+  }
+
+  async connect(walletId = 'injected') {
+    const provider = this._getProvider(walletId);
+    if (!provider) {
+      throw new Error('No wallet detected. Please install a wallet extension.');
+    }
+    try {
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      this.address = accounts[0];
+      this.provider = provider;
+      const chainIdHex = await provider.request({ method: 'eth_chainId' });
+      this.chainId = parseInt(chainIdHex, 16);
+      if (this.chainId !== CONFIG.network.chainIdDecimal) {
+        await this.switchToCitrea();
+      }
+      provider.on?.('accountsChanged', (accounts) => {
+        this.address = accounts[0] || null;
+        this._emit();
+      });
+      provider.on?.('chainChanged', (chainIdHex) => {
+        this.chainId = parseInt(chainIdHex, 16);
+        this._emit();
+      });
+      this._emit();
+      return this.address;
+    } catch (err) {
+      console.error('Wallet connection failed:', err);
+      throw err;
+    }
+  }
+
+  async switchToCitrea() {
+    if (!this.provider) return;
+    try {
+      await this.provider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: CONFIG.network.chainId }]
+      });
+      this.chainId = CONFIG.network.chainIdDecimal;
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        await this.provider.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: CONFIG.network.chainId,
+            chainName: CONFIG.network.chainName,
+            rpcUrls: CONFIG.network.rpcUrls,
+            blockExplorerUrls: CONFIG.network.blockExplorerUrls,
+            nativeCurrency: CONFIG.network.nativeCurrency
+          }]
+        });
+        this.chainId = CONFIG.network.chainIdDecimal;
+      } else {
+        throw switchError;
+      }
+    }
+    this._emit();
+  }
+
+  disconnect() {
+    this.provider = null;
+    this.signer = null;
+    this.address = null;
+    this.chainId = null;
+    this._emit();
+  }
+
+  shortAddress() {
+    if (!this.address) return '';
+    return this.address.slice(0, 6) + '...' + this.address.slice(-4);
+  }
+
+  async getBalance() {
+    if (!this.provider || !this.address) return '0';
+    const balHex = await this.provider.request({
+      method: 'eth_getBalance',
+      params: [this.address, 'latest']
+    });
+    const balWei = BigInt(balHex);
+    const balEth = Number(balWei) / 1e18;
+    return balEth.toFixed(6);
+  }
+}
+
+const wallet = new WalletManager();
+export default wallet;
