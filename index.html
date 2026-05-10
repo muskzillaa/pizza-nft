@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PIZZA — NFT Crowdfund on Citrea</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><span class="pizza-emoji">&#127829;</span> PIZZA</a>
+      <button class="menu-toggle" id="menuToggle"><span></span><span></span><span></span></button>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Mint</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="collection.html" class="nav-link">Collection</a></li>
+        <li><a href="about.html" class="nav-link">About</a></li>
+        <li>
+          <button class="btn-connect" id="connectWallet">Connect Wallet</button>
+          <div class="wallet-info" id="walletInfo">
+            <span class="wallet-addr" id="walletAddr"></span>
+            <button class="btn-disconnect" id="disconnectBtn">X</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <div class="network-warning" id="networkWarning">
+    <span>Wrong network — please switch to Citrea</span>
+    <button id="switchNetwork">Switch</button>
+  </div>
+  <main class="page">
+    <div class="page-center">
+      <section class="hero">
+        <h1 class="fade-in">buy me a pizza NFT<br>or get a refund</h1>
+        <div class="pizza-art fade-in">
+          <svg width="140" height="140" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <rect width="16" height="16" fill="#faf7f3" rx="1"/>
+            <rect x="3" y="2" width="10" height="1" fill="#d4903c"/>
+            <rect x="3" y="3" width="10" height="1" fill="#c47a2a"/>
+            <rect x="4" y="4" width="8" height="1" fill="#f5d04e"/>
+            <rect x="4" y="5" width="8" height="1" fill="#f7dc6f"/>
+            <rect x="5" y="6" width="7" height="1" fill="#f5d04e"/>
+            <rect x="5" y="7" width="6" height="1" fill="#f7dc6f"/>
+            <rect x="6" y="8" width="5" height="1" fill="#f5d04e"/>
+            <rect x="6" y="9" width="4" height="1" fill="#f7dc6f"/>
+            <rect x="7" y="10" width="3" height="1" fill="#f5d04e"/>
+            <rect x="7" y="11" width="2" height="1" fill="#f7dc6f"/>
+            <rect x="8" y="12" width="1" height="1" fill="#f5d04e"/>
+            <rect x="5" y="5" width="2" height="2" fill="#c0392b"/>
+            <rect x="9" y="4" width="2" height="2" fill="#c0392b"/>
+            <rect x="7" y="7" width="2" height="2" fill="#c0392b"/>
+            <rect x="5" y="5" width="1" height="1" fill="#e74c3c"/>
+            <rect x="9" y="4" width="1" height="1" fill="#e74c3c"/>
+            <rect x="7" y="7" width="1" height="1" fill="#e74c3c"/>
+            <rect x="10" y="7" width="1" height="1" fill="#2c3e50"/>
+            <rect x="6" y="10" width="1" height="1" fill="#27ae60"/>
+            <rect x="4" y="6" width="1" height="1" fill="#f9e67a"/>
+            <rect x="11" y="5" width="1" height="1" fill="#f9e67a"/>
+            <rect x="5" y="1" width="1" height="1" fill="#d4c5b0" opacity="0.3"/>
+            <rect x="8" y="0" width="1" height="1" fill="#d4c5b0" opacity="0.25"/>
+            <rect x="11" y="1" width="1" height="1" fill="#d4c5b0" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="timer-row fade-in">
+          <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+          <div class="countdown" id="countdown">
+            <span>06</span><small>d</small>
+            <span>20</span><small>h</small>
+            <span>20</span><small>m</small>
+            <span>11</span><small>s</small>
+          </div>
+        </div>
+        <div class="price-display fade-in">
+          <div class="price-value" id="priceValue">— cBTC</div>
+          <div class="price-label">per slice</div>
+        </div>
+        <div class="stats-row fade-in">
+          <strong id="statRaised">—</strong> cBTC raised
+          <span class="stats-dot"></span>
+          <strong id="statPatrons">—</strong> patrons
+        </div>
+        <div class="progress-wrap fade-in">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+          <div class="progress-text" id="progressText">— / — cBTC</div>
+        </div>
+        <div class="divider fade-in"></div>
+        <div class="fade-in">
+          <div class="slice-row">
+            <button class="slice-step" id="sliceMinus" type="button">−</button>
+            <input type="number" min="1" max="20" step="1" class="slice-input" id="sliceCount" value="1">
+            <button class="slice-step" id="slicePlus" type="button">+</button>
+            <span class="slice-x">slice<span id="sliceLabelS"></span></span>
+          </div>
+          <input type="text" class="mint-input" id="ethInput" value="" readonly>
+          <div class="conversion-note" id="conversionNote">1 slice = — cBTC</div>
+        </div>
+        <button class="btn-mint fade-in" id="mintBtn">Mint</button>
+        <div class="mint-footer fade-in">
+          <p>cBTC sent directly to founder treasury</p>
+          <p>NFT airdropped after campaign closes</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="wallet-modal" id="walletModal">
+    <div class="modal-header">
+      <h3>Connect Wallet</h3>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="wallet-list" id="walletList"></div>
+  </div>
+  <div class="modal-overlay" id="mintRevealOverlay"></div>
+  <div class="reveal-modal" id="mintRevealModal"></div>
+  <footer class="site-footer">
+    <p>PIZZA NFT &middot; Built on <a href="https://citrea.xyz" target="_blank">Citrea</a></p>
+  </footer>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

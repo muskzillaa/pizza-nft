@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collection — PIZZA NFT</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo"><span class="pizza-emoji">&#127829;</span> PIZZA</a>
+      <button class="menu-toggle" id="menuToggle"><span></span><span></span><span></span></button>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Mint</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="collection.html" class="nav-link">Collection</a></li>
+        <li><a href="about.html" class="nav-link">About</a></li>
+        <li>
+          <button class="btn-connect" id="connectWallet">Connect Wallet</button>
+          <div class="wallet-info" id="walletInfo">
+            <span class="wallet-addr" id="walletAddr"></span>
+            <button class="btn-disconnect" id="disconnectBtn">X</button>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </nav>
+  <div class="network-warning" id="networkWarning">
+    <span>Wrong network — please switch to Citrea</span>
+    <button id="switchNetwork">Switch</button>
+  </div>
+  <main class="page">
+    <div class="section-subtitle fade-in">Browse</div>
+    <h2 class="section-title fade-in">The PIZZA Collection</h2>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:2rem;max-width:500px" class="fade-in">
+      1,000 unique pizza slices, each with randomized toppings, flavors, and rarity traits. Every slice is a 1/1 on the Citrea blockchain.
+    </p>
+    <div class="collection-grid" id="collectionGrid"></div>
+  </main>
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="wallet-modal" id="walletModal">
+    <div class="modal-header">
+      <h3>Connect Wallet</h3>
+      <button class="modal-close" id="modalClose">&times;</button>
+    </div>
+    <div class="wallet-list" id="walletList"></div>
+  </div>
+  <footer class="site-footer">
+    <p>PIZZA NFT &middot; Built on <a href="https://citrea.xyz" target="_blank">Citrea</a></p>
+  </footer>
+  <script type="module">
+    import './js/app.js';
+    const grid = document.getElementById('collectionGrid');
+    const toppings = [
+      { pepperoni: '#c0392b', olive: '#2c3e50', basil: '#27ae60', name: 'Classic Pepperoni' },
+      { pepperoni: '#8e44ad', olive: '#2c3e50', basil: '#27ae60', name: 'Purple Haze' },
+      { pepperoni: '#e67e22', olive: '#1abc9c', basil: '#27ae60', name: 'Tropical Heat' },
+      { pepperoni: '#3498db', olive: '#e74c3c', basil: '#2ecc71', name: 'Ocean Breeze' },
+      { pepperoni: '#e84393', olive: '#636e72', basil: '#00b894', name: 'Pink Flamingo' },
+      { pepperoni: '#fdcb6e', olive: '#6c5ce7', basil: '#00cec9', name: 'Golden Dream' },
+      { pepperoni: '#d63031', olive: '#00b894', basil: '#ffeaa7', name: 'Fire & Ice' },
+      { pepperoni: '#a29bfe', olive: '#fd79a8', basil: '#55efc4', name: 'Pastel Pop' },
+      { pepperoni: '#636e72', olive: '#dfe6e9', basil: '#b2bec3', name: 'Monochrome' },
+      { pepperoni: '#00cec9', olive: '#ff7675', basil: '#fdcb6e', name: 'Neon Slice' },
+      { pepperoni: '#e17055', olive: '#74b9ff', basil: '#a29bfe', name: 'Sunset Wave' },
+      { pepperoni: '#2d3436', olive: '#d63031', basil: '#ffeaa7', name: 'Midnight Fire' },
+    ];
+    const prices = ['0.0039','0.0041','0.0038','0.0045','0.0052','0.0039','0.0061','0.0038','0.0073','0.0039','0.0044','0.0055'];
+    for (let i = 0; i < 12; i++) {
+      const t = toppings[i % toppings.length];
+      const card = document.createElement('div');
+      card.className = 'nft-card fade-in';
+      card.style.animationDelay = `${0.05 + i * 0.04}s`;
+      card.innerHTML = `
+        <div class="nft-img">
+          <svg viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+            <rect width="16" height="16" fill="#faf7f3" rx="1"/>
+            <rect x="3" y="2" width="10" height="1" fill="#d4903c"/>
+            <rect x="3" y="3" width="10" height="1" fill="#c47a2a"/>
+            <rect x="4" y="4" width="8" height="1" fill="#f5d04e"/>
+            <rect x="4" y="5" width="8" height="1" fill="#f7dc6f"/>
+            <rect x="5" y="6" width="7" height="1" fill="#f5d04e"/>
+            <rect x="5" y="7" width="6" height="1" fill="#f7dc6f"/>
+            <rect x="6" y="8" width="5" height="1" fill="#f5d04e"/>
+            <rect x="6" y="9" width="4" height="1" fill="#f7dc6f"/>
+            <rect x="7" y="10" width="3" height="1" fill="#f5d04e"/>
+            <rect x="7" y="11" width="2" height="1" fill="#f7dc6f"/>
+            <rect x="8" y="12" width="1" height="1" fill="#f5d04e"/>
+            <rect x="5" y="5" width="2" height="2" fill="${t.pepperoni}"/>
+            <rect x="9" y="4" width="2" height="2" fill="${t.pepperoni}"/>
+            <rect x="7" y="7" width="2" height="2" fill="${t.pepperoni}"/>
+            <rect x="10" y="7" width="1" height="1" fill="${t.olive}"/>
+            <rect x="6" y="10" width="1" height="1" fill="${t.basil}"/>
+          </svg>
+        </div>
+        <div class="nft-info">
+          <div class="nft-name">PIZZA #${String(i+1).padStart(4,'0')}</div>
+          <div class="nft-price">${prices[i]} cBTC</div>
+        </div>`;
+      grid.appendChild(card);
+    }
+  </script>
+</body>
+</html>
