@@ -28,6 +28,16 @@ class WalletManager {
 
   onChange(callback) {
     this.listeners.push(callback);
+    // Immediately emit current state so late subscribers (e.g. page-specific
+    // scripts that register after autoReconnect has already resolved) get the
+    // current wallet state without waiting for the next event.
+    const state = {
+      connected: !!this.address,
+      address: this.address,
+      chainId: this.chainId,
+      correctNetwork: this.chainId === CONFIG.network.chainIdDecimal
+    };
+    callback(state);
   }
 
   _emit() {
